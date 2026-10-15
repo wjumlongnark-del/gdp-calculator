@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GDP Calculator — Expenditure Approach</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #f0f3f7;
+  --border: #dde2ea;
+  --accent: #1a6fd4;
+  --accent2: #1a9e40;
+  --accent3: #d94f2b;
+  --accent4: #c48a00;
+  --text: #1a2332;
+  --muted: #6b7a92;
+  --C: #1a6fd4;
+  --I: #1a9e40;
+  --G: #c48a00;
+  --X: #1a8c3a;
+  --M: #d94f2b;
+  --NX: #7c3aed;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+#app { max-width: 1000px; margin: auto; }
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 32px 0 28px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  display: block;
+  width: 60px; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  margin: 16px auto 0;
+  border-radius: 2px;
+}
+.header h1 {
+  font-size: 1.8em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.header .formula {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.05em;
+  color: var(--accent);
+  margin-top: 8px;
+  letter-spacing: 0.04em;
+}
+.header p { color: var(--muted); font-size: 0.88em; margin-top: 6px; }
+
+/* Year tabs */
+.year-bar {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.year-tab {
+  padding: 6px 16px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted);
+  cursor: pointer; font-size: 0.85em; font-family: 'IBM Plex Mono', monospace;
+  transition: all 0.2s;
+}
+.year-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.1); }
+.year-tab:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+.btn-add-year {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 0.82em;
+  transition: all 0.2s;
+}
+.btn-add-year:hover { border-color: var(--accent2); color: var(--accent2); }
+.btn-del-year {
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid #fecaca; background: rgba(217,79,43,0.06);
+  color: var(--accent3); cursor: pointer; font-size: 0.75em;
+  transition: all 0.2s; margin-left: 2px;
+}
+.btn-del-year:hover { background: rgba(247,129,102,0.18); }
+
+/* Input grid */
+.input-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px;
+  margin-bottom: 20px;
+}
+.input-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-group label {
+  font-size: 0.8em; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.input-row { display: flex; gap: 8px; align-items: center; }
+.input-row input {
+  flex: 1; padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.95em;
+  transition: border 0.2s;
+}
+.input-row input:focus { outline: none; border-color: var(--accent); }
+.unit { color: var(--muted); font-size: 0.78em; white-space: nowrap; }
+
+.sub-inputs { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.sub-row { display: flex; gap: 6px; align-items: center; }
+.sub-row label { font-size: 0.75em; color: var(--muted); width: 120px; flex-shrink: 0; }
+.sub-row input {
+  flex: 1; padding: 6px 10px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px; color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.82em;
+  transition: border 0.2s;
+}
+.sub-row input:focus { outline: none; border-color: var(--accent); color: var(--text); }
+
+.divider-label {
+  grid-column: 1 / -1;
+  font-size: 0.78em; color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 12px; margin-top: 4px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.btn-main {
+  padding: 12px 28px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, #1f6feb, #388bfd);
+  color: white; font-weight: 700; font-size: 1em;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 0 16px rgba(56,139,253,0.3);
+}
+.btn-main:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(56,139,253,0.45); }
+.btn-sec {
+  padding: 12px 20px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text);
+  font-size: 0.9em; cursor: pointer; transition: all 0.2s;
+}
+.btn-sec:hover { border-color: var(--muted); color: var(--text); }
+
+/* Results */
+#result-section { display: none; }
+
+.gdp-hero {
+  background: linear-gradient(135deg, #e8f0fe, #dbeafe);
+  border: 1px solid rgba(26,111,212,0.25);
+  border-radius: 12px; padding: 24px 28px;
+  margin-bottom: 20px; display: flex;
+  justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 16px;
+}
+.gdp-hero .label { color: var(--muted); font-size: 0.85em; margin-bottom: 4px; }
+.gdp-hero .big { font-family: 'IBM Plex Mono', monospace; font-size: 2em; font-weight: 600; color: var(--accent); }
+.gdp-hero .sub { font-size: 0.78em; color: var(--muted); margin-top: 4px; }
+.gdp-hero .components { display: flex; gap: 16px; flex-wrap: wrap; }
+.comp-chip {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 16px; border-radius: 8px;
+  background: rgba(26,111,212,0.06); border: 1px solid var(--border);
+  min-width: 90px;
+}
+.comp-chip .c-val { font-family: 'IBM Plex Mono', monospace; font-size: 1em; font-weight: 600; }
+.comp-chip .c-lbl { font-size: 0.7em; color: var(--muted); margin-top: 2px; }
+.comp-chip .c-pct { font-size: 0.7em; margin-top: 2px; }
+
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+}
+.chart-box h4 { font-size: 0.82em; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+.chart-wrap { position: relative; height: 220px; }
+
+/* Analysis */
+.analysis-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin-bottom: 20px;
+}
+.analysis-panel h3 { font-size: 0.9em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+.a-item {
+  display: flex; gap: 14px; padding: 14px;
+  border-radius: 8px; margin-bottom: 10px;
+  background: #fafbfd; border: 1px solid var(--border);
+}
+.a-item:last-child { margin-bottom: 0; }
+.a-icon { font-size: 1.3em; flex-shrink: 0; margin-top: 1px; }
+.a-body .a-title { font-weight: 600; font-size: 0.9em; margin-bottom: 4px; }
+.a-body .a-text { font-size: 0.82em; color: var(--muted); line-height: 1.6; }
+.badge-sm {
+  display: inline-block; font-size: 0.68em; padding: 2px 8px;
+  border-radius: 20px; font-weight: 700; margin-left: 6px; vertical-align: middle;
+}
+.b-good  { background: #ecfdf3; color: #166534; border: 1px solid #bbf7d0; }
+.b-warn  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.b-bad   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.b-info  { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+/* Multi-year table */
+.table-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin-bottom: 20px;
+  display: none;
+}
+.table-panel h3 { font-size: 0.9em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.83em; }
+th { text-align: right; padding: 8px 10px; color: var(--text); border-bottom: 2px solid var(--border); font-weight: 700; font-size: 0.78em; text-transform: uppercase; background: var(--surface2); }
+th:first-child { text-align: left; }
+td { text-align: right; padding: 8px 10px; font-family: 'IBM Plex Mono', monospace; border-bottom: 1px solid rgba(255,255,255,0.04); }
+td:first-child { text-align: left; font-family: 'Sarabun', sans-serif; font-weight: 600; color: var(--text); }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.td-gdp { color: var(--accent); font-weight: 700; font-size: 1.05em; }
+
+/* Multi-year chart */
+.multi-chart-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  display: none;
+}
+.multi-chart-box h4 { font-size: 0.82em; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+.multi-chart-wrap { position: relative; height: 260px; }
+
+@media (max-width: 680px) {
+  .input-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .gdp-hero { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <h1>🧮 GDP Calculator</h1>
+    <div class="formula">GDP = C + I + G + (X − M)</div>
+    <p>Expenditure Approach — วิธีด้านรายจ่าย</p>
+  </div>
+
+  <!-- Year tabs -->
+  <div class="year-bar" id="yearBar"></div>
+
+  <!-- Input Panel -->
+  <div class="input-panel" id="capture-area">
+    <div class="input-grid">
+
+      <!-- C -->
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--C)"></span> C — การบริโภคครัวเรือน (Consumption)</label>
+        <div class="input-row">
+          <input type="number" id="inp-C" placeholder="0" min="0">
+          <span class="unit">ล้านบาท</span>
+        </div>
+        <div class="sub-inputs">
+          <div class="sub-row"><label>สินค้าคงทน</label><input type="number" id="sub-C1" placeholder="เช่น 500,000"></div>
+          <div class="sub-row"><label>สินค้าไม่คงทน</label><input type="number" id="sub-C2" placeholder="เช่น 300,000"></div>
+          <div class="sub-row"><label>บริการ</label><input type="number" id="sub-C3" placeholder="เช่น 200,000"></div>
+        </div>
+      </div>
+
+      <!-- I -->
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--I)"></span> I — การลงทุนภาคเอกชน (Investment)</label>
+        <div class="input-row">
+          <input type="number" id="inp-I" placeholder="0" min="0">
+          <span class="unit">ล้านบาท</span>
+        </div>
+        <div class="sub-inputs">
+          <div class="sub-row"><label>สิ่งก่อสร้าง</label><input type="number" id="sub-I1" placeholder="เช่น 200,000"></div>
+          <div class="sub-row"><label>เครื่องจักร/อุปกรณ์</label><input type="number" id="sub-I2" placeholder="เช่น 150,000"></div>
+          <div class="sub-row"><label>สินค้าคงคลัง</label><input type="number" id="sub-I3" placeholder="เช่น 50,000"></div>
+        </div>
+      </div>
+
+      <!-- G -->
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--G)"></span> G — รายจ่ายภาครัฐ (Government)</label>
+        <div class="input-row">
+          <input type="number" id="inp-G" placeholder="0" min="0">
+          <span class="unit">ล้านบาท</span>
+        </div>
+        <div class="sub-inputs">
+          <div class="sub-row"><label>เงินเดือนข้าราชการ</label><input type="number" id="sub-G1" placeholder="เช่น 300,000"></div>
+          <div class="sub-row"><label>สาธารณูปโภค</label><input type="number" id="sub-G2" placeholder="เช่น 200,000"></div>
+          <div class="sub-row"><label>การลงทุนภาครัฐ</label><input type="number" id="sub-G3" placeholder="เช่น 100,000"></div>
+        </div>
+      </div>
+
+      <!-- Net Exports -->
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--NX)"></span> X − M — ดุลการค้า (Net Exports)</label>
+        <div class="sub-inputs" style="margin-top:0">
+          <div class="sub-row">
+            <label style="color:var(--X); width:80px">X ส่งออก</label>
+            <input type="number" id="inp-X" placeholder="0" style="border-color:rgba(126,231,135,0.2)">
+            <span class="unit">ล้านบาท</span>
+          </div>
+          <div class="sub-row">
+            <label style="color:var(--M); width:80px">M นำเข้า</label>
+            <input type="number" id="inp-M" placeholder="0" style="border-color:rgba(247,129,102,0.2)">
+            <span class="unit">ล้านบาท</span>
+          </div>
+        </div>
+        <div style="margin-top:10px; padding: 8px 12px; background:rgba(188,140,255,0.08); border-radius:6px; border:1px solid rgba(188,140,255,0.2);">
+          <span style="font-size:0.8em; color:var(--muted);">Net Exports (X−M) = </span>
+          <span id="nx-preview" style="font-family:'IBM Plex Mono',monospace; font-size:0.9em; color:var(--NX);">0</span>
+          <span style="font-size:0.78em; color:var(--muted);"> ล้านบาท</span>
+        </div>
+      </div>
+
+      <div class="divider-label">ข้อมูลเพิ่มเติม (optional)</div>
+
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--muted)"></span> ปีที่คำนวณ</label>
+        <div class="input-row">
+          <input type="number" id="inp-year" placeholder="2567" min="2500" max="2600" value="2567">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label><span class="dot" style="background:var(--muted)"></span> จำนวนประชากร (คน)</label>
+        <div class="input-row">
+          <input type="number" id="inp-pop" placeholder="70000000">
+          <span class="unit">คน</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-main" onclick="calculate()">▶ คำนวณ GDP</button>
+      <button class="btn-sec" onclick="fillExample()">📋 ใส่ค่าตัวอย่าง</button>
+      <button class="btn-sec" onclick="saveYear()">💾 บันทึกปีนี้</button>
+      <button class="btn-sec" onclick="resetAll()">↺ รีเซ็ต</button>
+      <button class="btn-sec" onclick="exportImg()">🖼 บันทึกรูป</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="result-section">
+
+    <!-- Hero -->
+    <div class="gdp-hero">
+      <div>
+        <div class="label">GDP รวม (Expenditure Approach)</div>
+        <div class="big" id="res-gdp">—</div>
+        <div class="sub" id="res-gdp-sub"></div>
+      </div>
+      <div class="components" id="res-chips"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h4>สัดส่วนองค์ประกอบ GDP</h4>
+        <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4>เปรียบเทียบมูลค่า (ล้านบาท)</h4>
+        <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="analysis-panel">
+      <h3>📊 คำอธิบายเชิงคุณภาพ</h3>
+      <div id="analysis-content"></div>
+    </div>
+
+  </div>
+
+  <!-- Multi-year comparison -->
+  <div class="table-panel" id="tablePanel">
+    <h3>📅 เปรียบเทียบหลายปี</h3>
+    <div id="tableContent"></div>
+  </div>
+  <div class="multi-chart-box" id="multiChartBox">
+    <h4>แนวโน้ม GDP หลายปี (ล้านบาท)</h4>
+    <div class="multi-chart-wrap"><canvas id="chartMulti"></canvas></div>
+  </div>
+
+</div>
+
+<script>
+let pieChart, barChart, multiChart;
+const savedYears = [];
+
+// Live NX preview
+['inp-X','inp-M'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateNX);
+});
+function updateNX() {
+  const x = parseFloat(document.getElementById('inp-X').value)||0;
+  const m = parseFloat(document.getElementById('inp-M').value)||0;
+  const nx = x - m;
+  const el = document.getElementById('nx-preview');
+  el.textContent = nx.toLocaleString('th-TH');
+  el.style.color = nx >= 0 ? 'var(--X)' : 'var(--M)';
+}
+
+function getVals() {
+  return {
+    C: parseFloat(document.getElementById('inp-C').value)||0,
+    I: parseFloat(document.getElementById('inp-I').value)||0,
+    G: parseFloat(document.getElementById('inp-G').value)||0,
+    X: parseFloat(document.getElementById('inp-X').value)||0,
+    M: parseFloat(document.getElementById('inp-M').value)||0,
+    pop: parseFloat(document.getElementById('inp-pop').value)||0,
+    year: document.getElementById('inp-year').value||'—',
+  };
+}
+
+function fmtM(n) {
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+' ล้านล้าน';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+' พันล้าน';
+  return n.toLocaleString('th-TH')+' ล้าน';
+}
+function pct(part,total){ return total?((part/total)*100).toFixed(1)+'%':'0%'; }
+
+function calculate() {
+  const v = getVals();
+  const NX = v.X - v.M;
+  const GDP = v.C + v.I + v.G + NX;
+  if(GDP<=0){ alert('กรุณากรอกตัวเลขให้ครบถ้วน'); return; }
+
+  // Hero
+  document.getElementById('res-gdp').textContent = fmtM(GDP)+' บาท';
+  const perCap = v.pop ? (GDP*1e6/v.pop) : 0;
+  document.getElementById('res-gdp-sub').textContent =
+    `ปี ${v.year}` + (perCap ? ` · GDP per Capita = ${(perCap/1e3).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')} บาท/คน` : '');
+
+  // Chips
+  const parts = [
+    {key:'C',val:v.C,label:'Consumption',color:'var(--C)'},
+    {key:'I',val:v.I,label:'Investment',color:'var(--I)'},
+    {key:'G',val:v.G,label:'Government',color:'var(--G)'},
+    {key:'NX',val:NX,label:'Net Exports',color:NX>=0?'var(--X)':'var(--M)'},
+  ];
+  document.getElementById('res-chips').innerHTML = parts.map(p=>`
+    <div class="comp-chip">
+      <div class="c-val" style="color:${p.color}">${fmtM(p.val)}</div>
+      <div class="c-lbl">${p.key} — ${p.label}</div>
+      <div class="c-pct" style="color:${p.color}">${pct(Math.abs(p.val),GDP)}</div>
+    </div>`).join('');
+
+  // Pie Chart
+  if(pieChart) pieChart.destroy();
+  const pieCtx = document.getElementById('chartPie').getContext('2d');
+  pieChart = new Chart(pieCtx,{
+    type:'doughnut',
+    data:{
+      labels:['C บริโภค','I ลงทุน','G รัฐ', NX>=0?'X−M (บวก)':'X−M (ลบ)'],
+      datasets:[{
+        data:[v.C,v.I,v.G,Math.abs(NX)],
+        backgroundColor:['rgba(26,111,212,0.85)','rgba(26,158,64,0.85)','rgba(196,138,0,0.85)',NX>=0?'rgba(126,231,135,0.85)':'rgba(247,129,102,0.85)'],
+        borderWidth:2, borderColor:'#ffffff',
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#6b7a92',font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>` ${fmtM(c.parsed)} (${pct(c.parsed,GDP)})`}}
+      },
+      cutout:'60%',
+    }
+  });
+
+  // Bar Chart
+  if(barChart) barChart.destroy();
+  const barCtx = document.getElementById('chartBar').getContext('2d');
+  barChart = new Chart(barCtx,{
+    type:'bar',
+    data:{
+      labels:['C','I','G','X','M','NX','GDP'],
+      datasets:[{
+        data:[v.C,v.I,v.G,v.X,v.M,NX,GDP],
+        backgroundColor:['rgba(26,111,212,0.75)','rgba(26,158,64,0.75)','rgba(196,138,0,0.75)','rgba(26,140,58,0.75)','rgba(217,79,43,0.75)','rgba(124,58,237,0.75)','rgba(26,111,212,1)'],
+        borderRadius:5, borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fmtM(c.parsed)} บาท`}}},
+      scales:{
+        y:{ticks:{color:'#6b7a92',callback:v=>fmtM(v)},grid:{color:'rgba(0,0,0,0.06)'}},
+        x:{ticks:{color:'#6b7a92'},grid:{display:false}}
+      }
+    }
+  });
+
+  // Analysis
+  buildAnalysis(v, NX, GDP, perCap);
+
+  document.getElementById('result-section').style.display='block';
+  document.getElementById('result-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function buildAnalysis(v, NX, GDP, perCap) {
+  const items = [];
+  const cPct = (v.C/GDP)*100;
+  const iPct = (v.I/GDP)*100;
+  const gPct = (v.G/GDP)*100;
+  const nxPct = (NX/GDP)*100;
+
+  // C analysis
+  let cBadge, cClass;
+  if(cPct>70){cBadge='บริโภคสูงมาก';cClass='b-warn';}
+  else if(cPct>55){cBadge='ระดับปกติ';cClass='b-good';}
+  else{cBadge='บริโภคต่ำ';cClass='b-info';}
+  items.push({icon:'🛒',title:`C — การบริโภคครัวเรือน คิดเป็น ${cPct.toFixed(1)}% ของ GDP`,badge:cBadge,bClass:cClass,
+    text:`มูลค่าการบริโภค ${fmtM(v.C)} บาท ` +
+    (cPct>70?`สูงเกินกว่าเกณฑ์ปกติ (55–70%) บ่งชี้ว่าระบบเศรษฐกิจพึ่งพาการบริโภคภายในประเทศสูง ซึ่งอาจเปราะบางต่อภาวะเงินเฟ้อและการลดลงของรายได้ครัวเรือน`
+    :cPct>55?`อยู่ในช่วงเกณฑ์มาตรฐานของประเทศกำลังพัฒนา (55–70%) สะท้อนกำลังซื้อภาคครัวเรือนที่มีเสถียรภาพ`
+    :`ต่ำกว่าเกณฑ์ปกติ อาจสะท้อนว่าภาคครัวเรือนออมเงินสูง หรือมีข้อจำกัดด้านรายได้และกำลังซื้อ`)
+  });
+
+  // I analysis
+  let iBadge, iClass;
+  if(iPct>25){iBadge='ลงทุนสูง';iClass='b-good';}
+  else if(iPct>15){iBadge='ระดับปกติ';iClass='b-info';}
+  else{iBadge='ลงทุนต่ำ';iClass='b-warn';}
+  items.push({icon:'🏭',title:`I — การลงทุนภาคเอกชน คิดเป็น ${iPct.toFixed(1)}% ของ GDP`,badge:iBadge,bClass:iClass,
+    text:`มูลค่าการลงทุน ${fmtM(v.I)} บาท ` +
+    (iPct>25?`สูงกว่าเกณฑ์ดี (>25%) บ่งชี้ถึงความเชื่อมั่นของภาคธุรกิจและศักยภาพการเติบโตในอนาคต ซึ่งจะช่วยเพิ่มกำลังการผลิตและการจ้างงานระยะยาว`
+    :iPct>15?`อยู่ในระดับพอรับได้ (15–25%) ภาคเอกชนยังลงทุนอย่างต่อเนื่อง แต่ควรส่งเสริมนโยบายลดภาษีและสร้างสภาพแวดล้อมการลงทุนที่เอื้ออำนวยมากขึ้น`
+    :`ต่ำกว่าเกณฑ์ที่ควรเป็น (<15%) อาจสะท้อนความไม่แน่นอนทางเศรษฐกิจ หรืออัตราดอกเบี้ยที่สูงจนยับยั้งการลงทุน`)
+  });
+
+  // G analysis
+  let gBadge, gClass;
+  if(gPct>25){gBadge='รัฐใช้จ่ายสูง';gClass='b-warn';}
+  else if(gPct>15){gBadge='สมดุล';gClass='b-good';}
+  else{gBadge='รัฐใช้จ่ายน้อย';gClass='b-info';}
+  items.push({icon:'🏛️',title:`G — รายจ่ายภาครัฐ คิดเป็น ${gPct.toFixed(1)}% ของ GDP`,badge:gBadge,bClass:gClass,
+    text:`รายจ่ายรัฐบาล ${fmtM(v.G)} บาท ` +
+    (gPct>25?`สัดส่วนสูง บ่งชี้บทบาทรัฐในระบบเศรษฐกิจขนาดใหญ่ ซึ่งมีทั้งข้อดีด้านสวัสดิการสังคม และข้อเสียที่อาจกดดันการขาดดุลการคลัง หากรายได้ภาษีไม่เพียงพอ`
+    :gPct>15?`อยู่ในระดับสมดุลที่เหมาะสม รัฐบาลมีบทบาทพอดีในการกระตุ้นเศรษฐกิจโดยไม่สร้างภาระทางการคลังเกินไป`
+    :`สัดส่วนต่ำ รัฐอาจลงทุนโครงสร้างพื้นฐานน้อย ซึ่งอาจส่งผลต่อการพัฒนาศักยภาพระยะยาวของประเทศ`)
+  });
+
+  // NX analysis
+  let nxBadge, nxClass;
+  if(NX>0){nxBadge='เกินดุลการค้า';nxClass='b-good';}
+  else if(NX===0){nxBadge='สมดุล';nxClass='b-info';}
+  else{nxBadge='ขาดดุลการค้า';nxClass='b-bad';}
+  items.push({icon:'🌐',title:`X − M — ดุลการค้า = ${fmtM(NX)} บาท (${nxPct.toFixed(1)}% ของ GDP)`,badge:nxBadge,bClass:nxClass,
+    text:`ส่งออก ${fmtM(v.X)} บาท | นำเข้า ${fmtM(v.M)} บาท ` +
+    (NX>0?`การเกินดุลการค้าเพิ่ม GDP โดยตรง บ่งชี้ว่าประเทศมีความสามารถแข่งขันด้านการส่งออกสูง และได้รับเงินตราต่างประเทศสุทธิ`
+    :NX===0?`ดุลการค้าสมดุลพอดี การส่งออกและนำเข้าหักล้างกัน ไม่มีผลกระทบสุทธิต่อ GDP ในส่วนนี้`
+    :`การขาดดุลการค้าหักออกจาก GDP บ่งชี้ว่าต้องพึ่งพาสินค้านำเข้า อาจเป็นสัญญาณของการบริโภคสูงหรือขาดแคลนการผลิตภายใน`)
+  });
+
+  // Per capita — World Bank FY2026 thresholds converted at ~35 THB/USD
+  // High income: > $13,935 ≈ 487,725 THB
+  // Upper-middle: $4,496–$13,935 ≈ 157,360–487,725 THB
+  // Lower-middle: $1,136–$4,495 ≈ 39,760–157,360 THB
+  // Low income: ≤ $1,135 ≈ 39,725 THB
+  if(perCap>0){
+    const USD_RATE = 35;
+    const HIGH_THB        = 13935 * USD_RATE;   // ~487,725
+    const UPPER_MID_THB   = 4496  * USD_RATE;   // ~157,360
+    const LOWER_MID_THB   = 1136  * USD_RATE;   // ~39,760
+    let pcBadge, pcClass, pcDesc;
+    if(perCap >= HIGH_THB){
+      pcBadge='รายได้สูง (High Income)'; pcClass='b-good';
+      pcDesc=`จัดอยู่ใน<strong>กลุ่มประเทศรายได้สูง</strong> ตามเกณฑ์ World Bank FY2026 (> $13,935/คน/ปี หรือ ~${(HIGH_THB/1e3).toFixed(0)}k บาท) สะท้อนมาตรฐานการครองชีพสูงและระบบเศรษฐกิจที่พัฒนาแล้ว`;
+    } else if(perCap >= UPPER_MID_THB){
+      pcBadge='รายได้ปานกลางบน (Upper-Middle)'; pcClass='b-info';
+      pcDesc=`จัดอยู่ใน<strong>กลุ่มรายได้ปานกลางบน</strong> ($4,496–$13,935/คน/ปี หรือ ~${(UPPER_MID_THB/1e3).toFixed(0)}k–${(HIGH_THB/1e3).toFixed(0)}k บาท) ยังต้องพัฒนาอีก ${((HIGH_THB-perCap)/1e3).toFixed(1)}k บาท/คน/ปี จึงจะข้ามเกณฑ์รายได้สูง`;
+    } else if(perCap >= LOWER_MID_THB){
+      pcBadge='รายได้ปานกลางล่าง (Lower-Middle)'; pcClass='b-warn';
+      pcDesc=`จัดอยู่ใน<strong>กลุ่มรายได้ปานกลางล่าง</strong> ($1,136–$4,495/คน/ปี หรือ ~${(LOWER_MID_THB/1e3).toFixed(0)}k–${(UPPER_MID_THB/1e3).toFixed(0)}k บาท) ควรเร่งพัฒนาผลิตภาพแรงงานและลงทุนในโครงสร้างพื้นฐาน`;
+    } else {
+      pcBadge='รายได้ต่ำ (Low Income)'; pcClass='b-bad';
+      pcDesc=`จัดอยู่ใน<strong>กลุ่มรายได้ต่ำ</strong> (< $1,136/คน/ปี หรือ ~${(LOWER_MID_THB/1e3).toFixed(0)}k บาท) ต้องการนโยบายเร่งด่วนด้านการกระจายรายได้ การจ้างงาน และการลงทุนในทุนมนุษย์`;
+    }
+    items.push({icon:'👤',title:`GDP per Capita = ${(perCap/1e3).toFixed(1)}k บาท/คน/ปี (~$${(perCap/USD_RATE).toLocaleString('en',{maximumFractionDigits:0})}/คน/ปี)`,badge:pcBadge,bClass:pcClass,
+      text:`มูลค่าผลผลิตเฉลี่ยต่อหัวประชากร ${perCap.toLocaleString('th-TH',{maximumFractionDigits:0})} บาท/คน/ปี ` + pcDesc +
+      `<br><small style="color:#6b7a92;margin-top:4px;display:block">📌 อ้างอิง: World Bank Income Classification FY2026 (ข้อมูล GNI/capita ปี 2024, อัตราแลกเปลี่ยน ~35 บาท/USD)</small>`
+    });
+  }
+
+  document.getElementById('analysis-content').innerHTML = items.map(it=>`
+    <div class="a-item">
+      <div class="a-icon">${it.icon}</div>
+      <div class="a-body">
+        <div class="a-title">${it.title}<span class="badge-sm ${it.bClass}">${it.badge}</span></div>
+        <div class="a-text">${it.text}</div>
+      </div>
+    </div>`).join('');
+}
+
+function saveYear() {
+  const v = getVals();
+  const NX = v.X - v.M;
+  const GDP = v.C + v.I + v.G + NX;
+  if(GDP<=0){alert('กรุณากรอกข้อมูลก่อนบันทึก');return;}
+  const existing = savedYears.findIndex(y=>y.year===v.year);
+  const entry = {year:v.year, C:v.C, I:v.I, G:v.G, X:v.X, M:v.M, NX, GDP};
+  if(existing>=0) savedYears[existing]=entry; else savedYears.push(entry);
+  savedYears.sort((a,b)=>a.year-b.year);
+  renderYearTabs();
+  renderMultiYear();
+  alert(`บันทึกข้อมูลปี ${v.year} แล้ว`);
+}
+
+function renderYearTabs() {
+  const bar = document.getElementById('yearBar');
+  bar.innerHTML = '<span style="font-size:0.8em;color:var(--muted);margin-right:4px;">ปีที่บันทึก:</span>' +
+    savedYears.map(y=>`
+      <span class="year-tab" onclick="loadYear('${y.year}')">${y.year}</span>
+      <button class="btn-del-year" onclick="deleteYear('${y.year}')">✕</button>`).join('') +
+    `<button class="btn-add-year" onclick="document.getElementById('inp-year').focus()">+ เพิ่มปี</button>`;
+}
+
+function loadYear(yr) {
+  const y = savedYears.find(s=>s.year===yr); if(!y) return;
+  document.getElementById('inp-C').value=y.C;
+  document.getElementById('inp-I').value=y.I;
+  document.getElementById('inp-G').value=y.G;
+  document.getElementById('inp-X').value=y.X;
+  document.getElementById('inp-M').value=y.M;
+  document.getElementById('inp-year').value=y.year;
+  updateNX(); calculate();
+}
+function deleteYear(yr) {
+  const i = savedYears.findIndex(s=>s.year===yr);
+  if(i>=0) savedYears.splice(i,1);
+  renderYearTabs(); renderMultiYear();
+}
+
+function renderMultiYear() {
+  if(savedYears.length<2){
+    document.getElementById('tablePanel').style.display='none';
+    document.getElementById('multiChartBox').style.display='none';
+    return;
+  }
+  document.getElementById('tablePanel').style.display='block';
+  document.getElementById('multiChartBox').style.display='block';
+
+  // Table
+  document.getElementById('tableContent').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>ปี</th><th>C</th><th>I</th><th>G</th><th>X</th><th>M</th><th>NX</th><th>GDP</th>
+      </tr></thead>
+      <tbody>${savedYears.map(y=>`<tr>
+        <td>${y.year}</td>
+        <td style="color:var(--C)">${fmtM(y.C)}</td>
+        <td style="color:var(--I)">${fmtM(y.I)}</td>
+        <td style="color:var(--G)">${fmtM(y.G)}</td>
+        <td style="color:var(--X)">${fmtM(y.X)}</td>
+        <td style="color:var(--M)">${fmtM(y.M)}</td>
+        <td style="color:${y.NX>=0?'var(--X)':'var(--M)'}">${fmtM(y.NX)}</td>
+        <td class="td-gdp">${fmtM(y.GDP)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+
+  // Multi chart
+  if(multiChart) multiChart.destroy();
+  const mCtx = document.getElementById('chartMulti').getContext('2d');
+  multiChart = new Chart(mCtx,{
+    type:'line',
+    data:{
+      labels: savedYears.map(y=>y.year),
+      datasets:[
+        {label:'GDP',data:savedYears.map(y=>y.GDP),borderColor:'#58a6ff',backgroundColor:'rgba(26,111,212,0.08)',tension:0.3,pointRadius:5,fill:true},
+        {label:'C',data:savedYears.map(y=>y.C),borderColor:'#1a6fd4',borderDash:[4,4],tension:0.3,pointRadius:3,borderWidth:1.5},
+        {label:'I',data:savedYears.map(y=>y.I),borderColor:'#1a9e40',borderDash:[4,4],tension:0.3,pointRadius:3,borderWidth:1.5},
+        {label:'G',data:savedYears.map(y=>y.G),borderColor:'#c48a00',borderDash:[4,4],tension:0.3,pointRadius:3,borderWidth:1.5},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#6b7a92',font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtM(c.parsed.y)} บาท`}}
+      },
+      scales:{
+        y:{ticks:{color:'#6b7a92',callback:v=>fmtM(v)},grid:{color:'rgba(0,0,0,0.06)'}},
+        x:{ticks:{color:'#6b7a92'},grid:{display:false}}
+      }
+    }
+  });
+}
+
+function fillExample() {
+  document.getElementById('inp-C').value  = 9500000;
+  document.getElementById('inp-I').value  = 3800000;
+  document.getElementById('inp-G').value  = 4200000;
+  document.getElementById('inp-X').value  = 7800000;
+  document.getElementById('inp-M').value  = 7200000;
+  document.getElementById('inp-pop').value= 71000000;
+  document.getElementById('inp-year').value='2567';
+  document.getElementById('sub-C1').value = 2500000;
+  document.getElementById('sub-C2').value = 4500000;
+  document.getElementById('sub-C3').value = 2500000;
+  document.getElementById('sub-I1').value = 1800000;
+  document.getElementById('sub-I2').value = 1600000;
+  document.getElementById('sub-I3').value = 400000;
+  document.getElementById('sub-G1').value = 2000000;
+  document.getElementById('sub-G2').value = 1400000;
+  document.getElementById('sub-G3').value = 800000;
+  updateNX();
+}
+
+function resetAll() {
+  ['inp-C','inp-I','inp-G','inp-X','inp-M','inp-pop',
+   'sub-C1','sub-C2','sub-C3','sub-I1','sub-I2','sub-I3','sub-G1','sub-G2','sub-G3']
+    .forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inp-year').value='2567';
+  updateNX();
+  document.getElementById('result-section').style.display='none';
+}
+
+function exportImg() {
+  const resultEl = document.getElementById('result-section');
+  if(resultEl.style.display==='none'||resultEl.style.display===''){
+    alert('กรุณากดคำนวณ GDP ก่อนบันทึกรูปภาพ');
+    return;
+  }
+  html2canvas(resultEl,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false}).then(c=>{
+    const a=document.createElement('a');
+    a.download='gdp-result.png';
+    a.href=c.toDataURL('image/png');
+    a.click();
+  });
+}
+</script>
+</body>
+</html>
